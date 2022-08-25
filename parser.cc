@@ -554,9 +554,21 @@ bool Parser::ParseClass(Token &token)
 
   // Get the class name
   Token classNameToken;
-  if(!GetIdentifier(classNameToken))
-    throw; // Missing class name
-
+  if(!GetIdentifier(classNameToken)) {
+      throw;
+  } // Missing class name
+  else
+  {
+      std::vector<std::string>::const_iterator unusedMacroIt; // check definition like "class ENGINE_API name{"
+      unusedMacroIt = std::find(options_.unusedMacros.begin(), options_.unusedMacros.end(), classNameToken.token);
+      if (unusedMacroIt != options_.unusedMacros.end())
+      {
+          SkipUnusedMacro();
+          if(!GetIdentifier(classNameToken)) {
+              throw;
+          } // Missing class name
+      }
+  }
   writer_.String("name");
   writer_.String(classNameToken.token.c_str());
 
@@ -712,6 +724,13 @@ bool Parser::ParseFunction(Token &token, const std::string& macroName)
     return false;
 
   WriteCurrentAccessControlType();
+
+  for(auto& it : options_.unusedMacros)
+      if(MatchIdentifier(it.c_str()))
+      {
+          SkipUnusedMacro();
+          break;
+      }
 
   // Process method specifiers in any particular order
   bool isVirtual = false, isInline = false, isConstExpr = false, isStatic = false;
@@ -1150,4 +1169,49 @@ bool Parser::ParseClassTemplateArgument()
 
   writer_.EndObject();
   return true;
+}
+//-------------------------------------------------------------------------------------------------
+bool Parser::SkipUnusedMacro()
+{
+    if (!MatchSymbol("("))
+        return false;
+    if (!SkipMetaSequence())
+        return false;
+
+    // Possible ;
+    MatchSymbol(";");
+
+    return true;
+}
+//-------------------------------------------------------------------------------------------------
+bool Parser::SkipMetaSequence()
+{
+
+    if(!MatchSymbol(")"))
+    {
+        do
+        {
+            // Parse key value
+            Token keyToken;
+            if (!GetIdentifier(keyToken))
+                return Error("Expected identifier in meta sequence");
+
+            // Simple value?
+            if (MatchSymbol("=")) {
+                Token token;
+                if (!GetToken(token))
+                    throw; // Expected token
+            }
+                // Compound value
+            else if (MatchSymbol("("))
+            {
+                if (!SkipMetaSequence())
+                    return false;
+                // No value
+            }
+        } while (MatchSymbol(","));
+
+        MatchSymbol(")");
+    }
+    return true;
 }

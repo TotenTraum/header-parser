@@ -43,6 +43,7 @@ protected:
   bool ParseDeclaration(Token &token);
   bool ParseDirective();
   bool SkipDeclaration(Token &token);
+  bool SkipMetaSequence();
   bool ParseProperty(Token &token);
   bool ParseEnum(Token &token);
   bool ParseMacroMeta();
@@ -73,6 +74,7 @@ protected:
 
   void WriteToken(const Token &token);
   bool ParseCustomMacro(Token & token, const std::string& macroName);
+  bool SkipUnusedMacro();
 
 private:
   Options options_;
